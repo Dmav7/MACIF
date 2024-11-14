@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>La roue des caba !!!</title>
+    
+    <style type="text/css">
+        text {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 30px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        #chart {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            top: 0;
+            left: 100px;
+svg {
+    filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+        }
+        #question {
+            position: absolute;
+            width: 920px;
+            height: 920px;
+            top: 0;
+            left: 1050px;
+        }
+        #question h1 {
+            font-size: 30px;
+            font-weight: bold;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            position: absolute;
+            padding: 0;
+            margin: 0;
+            top: 50%;
+            -webkit-transform: translate(0, -50%);
+            transform: translate(0, -50%);
+        }
+button {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    background-color: #4CAF50; /* Vert */
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px; /* Coins arrondis */
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3); /* Ombre */
+    transition: all 0.3s ease; /* Animation douce */
+}
+
+button:hover {
+    background-color: #45a049; /* Couleur légèrement différente au survol */
+    transform: scale(1.1); /* Agrandir légèrement au survol */
+}
+
+button:active {
+    background-color: #3e8e41; /* Couleur plus foncée lors du clic */
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Réduire l'ombre */
+    transform: scale(1.05); /* Léger retour au clic */
+}
+
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <div id="question"><h1></h1></div>
+
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script type="text/javascript" charset="utf-8">
+        var padding = {top: 20, right: 40, bottom: 0, left: 0},
+            w = 900 - padding.left - padding.right,
+            h = 900 - padding.top - padding.bottom,
+            r = Math.min(w, h) / 2,
+            rotation = 0,
+            oldrotation = 0,
+            picked = 100000,
+            oldpick = [],
+            color = d3.scale.category20();
+
+        var data = [
+            {"label": "CAS 10", "value": 10, "question": "<i>CAS 10</i> :<br><br>- Circulation même sens sur une même file<br>- Choc arrière pour le véhicule de devant<br>- Choc avant ou latéral pour le second véhicule<br>- Les véhicules sont dans le prolongement l’un de l’autre"},
+            {"label": "CAS 56", "value": 1, "question": "<i>CAS 56</i> :<br><br>- Couleur des feux indéterminée<br>- Cumul d’interdictions de même nature (50vs50 // 51vs51)<br>- Type de l’accident indéterminé"},
+            {"label": "CAS 21", "value": 1, "question": "<i>CAS 21</i> :<br><br>- Accident de sens inverse<br>- Soit il n'y a pas de preuve de l’empiétement de l’axe médian<br>- Soit il y a empiétement des deux véhicules"},
+            {"label": "CAS 43", "value": 1, "question": "<i>CAS 43</i> :<br><br>- Soit le véhicule est en stationnement dans un carrefour<br>- Soit des places sont matérialisées sur le croquis<br>- Soit en double file"},
+            {"label": "CAS 13", "value": 1, "question": "<i>CAS 13</i> :<br><br>- Circulation même sens sur deux files<br>- Soit la preuve d’un changement de file n’est pas rapportée<br>- Soit les deux véhicules changent de file simultanément"},
+            {"label": "CAS 20", "value": 1, "question": "<i>CAS 20</i> :<br><br>- Circulation en sens inverse<br>- L’empiétement sur la voie en sens inverse d’un des véhicules est prouvé<br>- Exception : La circulation sur le trottoir d’un des deux véhicules rapporte la preuve de l’empiètement de l’autre véhicule (Pas de cas 50 dans ce cas)"},
+            {"label": "CAS 30", "value": 1, "question": "<i>CAS 30 (conditions cumulatives)</i> :<br><br>- Les véhicules proviennent de deux chaussées différentes<br>- L’accident a lieu dans la zone de carrefour ou au delà<br>- Les trajectoires se coupent ou se rejoignent"},
+            {"label": "CAS 40", "value": 1, "question": "<i>CAS 40</i> :<br><br>- Le véhicule est présumé en stationnement régulier<br>- La mention “être à l’arrêt” n’est pas suffisante pour casser la présomption de stationnement<br>- La notion de stationnement interdit ou gênant au sens du code de la route n’est pas retenue (stationnement sur zebra ou trottoir = ok)<br>- Exception : ouverture de portière et chute d’objet<br>- 2 véhicules en stationnement sans infos supplémentaires = cas 56"},
+            {"label": "CAS 51", "value": 1, "question": "<i>CAS 51</i> :<br><br>- Non respect d’un Cédez-le-passage ou d'un Stop<br>- Non respect d’un carrefour à sens giratoire ou d’une bretelle d’accès<br>- Non respect d’une priorité spéciale (priorité transport commun)<br>- Objets tombant, déjà tombés ou projetés (en stationnement ou non)<br>- Marche arrière ou un demi-tour<br>- Sortie d'un stationnement, d'un parking, d'un lieu non-ouvert à la circulation publique, d'un chemin de terre<br>- Ouverture de portière<br>- Ouverture ou fermeture des portières des véhicules magasins"},
+            {"label": "CAS 31", "value": 1, "question": "<i>CAS 31</i> :<br><br>- X prioritaire de droite empiète sur l’axe médian"},
+            {"label": "CAS 17", "value": 1, "question": "<i>CAS 17</i> :<br><br>- Circulation sur deux files dans le même sens<br>- Y change de file en virant à gauche dans une chaussée latérale <u>non protégée</u><br>- X double Y"},
+            {"label": "CAS 50", "value": 1, "question": "<i>CAS 50</i> :<br><br>- L’interdiction absolue l’emporte sur l’interdiction relative (cas 51)<br>- La case 17 cochée en l’absence d’autres éléments<br>- Feux de signalisation<br>- Ligne continue<br>- Trottoir<br>- Zebra<br>- BAU<br>- Circulation sur des emplacements de stationnement<br>- Barrage de police<br>- Sens interdit<br>- Non respect de la signalisation au sol"},
+            {"label": "CAS 15", "value": 1, "question": "<i>CAS 15</i> :<br><br>- Circulation même sens sur deux files<br>- Preuve du changement de file d’un des véhicules<br>- Exception : Lorsque l’un des véhicules est à l’arrêt, l’autre véhicule est réputé changer de file<br>- Changer de file c’est prendre la file de l’autre"}
+        ];
+
+        var svg = d3.select('#chart')
+            .append("svg")
+            .data([data])
+            .attr("width", w + padding.left + padding.right)
+            .attr("height", h + padding.top + padding.bottom);
+
+        var container = svg.append("g")
+            .attr("class", "chartholder")
+            .attr("transform", "translate(" + (w / 2 + padding.left) + "," + (h / 2 + padding.top) + ")");
+
+        var vis = container.append("g");
+        var pie = d3.layout.pie().sort(null).value(function(d) { return 1; });
+        var arc = d3.svg.arc().outerRadius(r);
+
+        var arcs = vis.selectAll("g.slice")
+            .data(pie)
+            .enter()
+            .append("g")
+            .attr("class", "slice");
+
+        arcs.append("path")
+            .attr("fill", function(d, i) { return color(i); })
+            .attr("d", arc);
+
+        arcs.append("text").attr("transform", function(d) {
+            d.innerRadius = 0;
+            d.outerRadius = r;
+            d.angle = (d.startAngle + d.endAngle) / 2;
+            return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")translate(" + (d.outerRadius - 10) + ")";
+        })
+        .attr("text-anchor", "end")
+        .text(function(d, i) { return data[i].label; });
+
+        container.on("click", spin);
+
+        function spin(d) {
+// Effacer le texte de la question au début de la rotation
+d3.select("#question h1").text("");
+
+            container.on("click", null);
+            if (oldpick.length == data.length) {
+                container.on("click", null);
+                return;
+            }
+
+            var ps = 360 / data.length,
+                pieslice = Math.round(1440 / data.length),
+                rng = Math.floor((Math.random() * 1440) + 360);
+            rotation = (Math.round(rng / ps) * ps);
+            picked = Math.round(data.length - (rotation % 360) / ps);
+            picked = picked >= data.length ? (picked % data.length) : picked;
+
+            if (oldpick.indexOf(picked) !== -1) {
+                d3.select(this).call(spin);
+                return;
+            } else {
+                oldpick.push(picked);
+            }
+
+            rotation += 90 - Math.round(ps / 2);
+            vis.transition()
+                .duration(3000)
+                .attrTween("transform", rotTween)
+                .each("end", function() {
+                    d3.select(".slice:nth-child(" + (picked + 1) + ") path")
+                        .attr("fill", "#ffffff")
+    .attr("stroke", "black")  // Bord lumineux
+    .attr("stroke-width", "3")
+    .attr("stroke-opacity", "0.7");
+
+                    // Afficher le bouton de réponse
+                    d3.select("#question h1").html('<button onclick="afficherReponse()">Réponse</button>');
+
+                    // Sauvegarder la question choisie pour l'afficher après clic sur "Réponse"
+                    questionChoisie = data[picked].question;
+                    oldrotation = rotation;
+                    container.on("click", spin);
+                });
+        }
+
+        // Sauvegarde de la question
+        var questionChoisie = "";
+
+        function afficherReponse() {
+            d3.select("#question h1").html(questionChoisie);
+        }
+//make arrow
+        svg.append("g")
+            .attr("transform", "translate(" + (w + padding.left + padding.right + 15) + "," + ((h/2)+padding.top) + ")")
+            .append("path")
+            .attr("d", "M-" + (r*.15) + ",0L0," + (r*.05) + "L0,-" + (r*.05) + "Z")
+            .style({
+        "fill": "#4CAF50",  // Utiliser la même couleur que le bouton
+        "stroke": "#4CAF50", // Appliquer la même couleur à la bordure
+        "stroke-width": "2"  // Optionnel : ajout d'un léger contour pour plus de visibilité
+    });
+
+        //draw spin circle
+        container.append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", 60)
+            .style({"fill":"white","cursor":"pointer"});
+
+        //spin text
+        container.append("text")
+            .attr("x", 0)
+            .attr("y", 15)
+            .attr("text-anchor", "middle")
+            .text("GO !!")
+            .style({"font-weight":"bold", "font-size":"30px"});
+
+
+
+        function rotTween(to) {
+            var i = d3.interpolate(oldrotation % 360, rotation);
+            return function(t) {
+                return "rotate(" + i(t) + ")";
+            };
+        }
+    </script>
+</body>
+</html>
